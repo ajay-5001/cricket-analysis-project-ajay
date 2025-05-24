@@ -1,0 +1,177 @@
+ from google.colab import drive
+drive.mount('/content/drive')
+import pandas as pd
+pd.read_csv("dim_match_summary.csv")
+ import pandas as pd
+pd.read_csv("dim_players.csv")
+ import pandas as pd
+pd.read_csv("fact_bating_summary.csv")
+# Merge batting with match details
+# Assign the result of reading the CSVs to variables
+df_matches = pd.read_csv("dim_match_summary.csv")
+df_players = pd.read_csv("dim_players.csv")
+df_batting = pd.read_csv("fact_bating_summary.csv")
+
+# Load the bowling data
+df_bowling = pd.read_csv("fact_bowling_summary.csv")
+
+batting_full = df_batting.merge(df_matches, on='match_id', how='left')
+batting_full = batting_full.merge(df_players, left_on='batsmanName', right_on='name', how='left')
+
+# Merge bowling with match details
+bowling_full = df_bowling.merge(df_matches, on='match_id', how='left')
+bowling_full = bowling_full.merge(df_players, left_on='bowlerName', right_on='name', how='left')
+top_batters = batting_full.groupby('batsmanName')['runs'].sum().sort_values(ascending=False).head(10)
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(10,6))
+sns.barplot(x=top_batters.values, y=top_batters.index, palette="viridis")
+plt.title("Top 10 Run Scorers")
+plt.xlabel("Total Runs")
+plt.ylabel("Player")
+plt.show()
+ top_bowlers = bowling_full.groupby('bowlerName')['wickets'].sum().sort_values(ascending=False).head(10)
+
+plt.figure(figsize=(10,6))
+sns.barplot(x=top_bowlers.values, y=top_bowlers.index, palette="mako")
+plt.title("Top 10 Wicket Takers")
+plt.xlabel("Total Wickets")
+plt.ylabel("Bowler")
+plt.show()
+team_batting = batting_full.groupby('teamInnings')['runs'].mean().sort_values(ascending=False)
+
+plt.figure(figsize=(10,5))
+sns.barplot(x=team_batting.values, y=team_batting.index, palette="coolwarm")
+plt.title("Average Runs Scored per Team")
+plt.xlabel("Average Runs")
+plt.ylabel("Team")
+plt.show()
+ team_bowling = bowling_full.groupby('bowlingTeam')['economy'].mean().sort_values()
+
+plt.figure(figsize=(10,5))
+sns.barplot(x=team_bowling.values, y=team_bowling.index, palette="cubehelix")
+plt.title("Average Bowling Economy per Team")
+plt.xlabel("Economy Rate")
+plt.ylabel("Team")
+plt.show()
+[17/05, 3:10 pm] Kiran Clg: import seaborn as sns
+import matplotlib.pyplot as plt
+import plotly.express as px
+import pandas as pd
+
+# Ensure battingPos is numeric
+batting_full['battingPos'] = pd.to_numeric(batting_full['battingPos'], errors='coerce')
+
+# Set the Seaborn style
+sns.set(style="whitegrid", palette="muted")
+
+# Plot using Seaborn (boxplot)
+plt.figure(figsize=(12,6))
+
+# Create a colorful boxplot with custom palette
+ax = sns.boxplot(x='battingPos', y='SR', data=batting_full, palette="Set2")
+
+# Add title and labels
+plt.title("Strike Rate by Batting Position", fontsize=16, fontweight='bold', color='navy')
+plt.xlabel("Batting Position", fontsize=14, fontweight='bold', color='darkblue')
+plt.ylabel("Strike Rate", fontsize=14, fontweight='bold', color='darkblue')
+
+# Add grid and customize appearance
+plt.grid(True, axis='y', linestyle='--', alpha=0.7)
+
+# Show plot
+plt.tight_layout()
+plt.show()
+
+# Alternatively, interactive Plotly plot
+# Remove the invalid color_continuous_scale argument
+fig = px.box(batting_full, x='battingPos', y='SR',
+             title="Strike Rate by Batting Position",
+             labels={'battingPos': 'Batting Position', 'SR': 'Strike Rate'},
+             color='battingPos') # color_continuous_scale removed
+fig.update_traces(quartilemethod="inclusive")  # Include all quartiles in the boxplot
+fig.update_layout(
+    title="Interactive: Strike Rate by Batting Position",
+    title_x=0.5, title_y=0.95,
+    xaxis_title="Batting Position",
+    yaxis_title="Strike Rate",
+    font=dict(size=14, family="Arial"),
+    paper_bgcolor="rgba(240, 240, 240, 0.95)",
+    plot_bgcolor="rgba(240, 240, 240, 0.95)"
+)
+
+fig.show()
+ df_matches['marginType'] = df_matches['margin'].str.extract(r'(\w+)$')
+df_matches['marginValue'] = df_matches['margin'].str.extract(r'(\d+)').astype(float)
+
+plt.figure(figsize=(10,6))
+sns.boxplot(x='marginType', y='marginValue', data=df_matches)
+plt.title("Distribution of Victory Margins")
+plt.xlabel("Margin Type")
+plt.ylabel("Margin Value")
+plt.show()
+# Filter players with minimum 30 balls faced
+batters = df_batting[df_batting['balls'] >= 30].copy() # Use .copy() to avoid SettingWithCopyWarning
+
+# Convert 'SR' column to numeric, coercing errors to NaN
+batters['SR'] = pd.to_numeric(batters['SR'], errors='coerce')
+
+# Drop rows where 'SR' could not be converted to numeric (contains NaN)
+batters = batters.dropna(subset=['SR'])
+
+# Aggregate
+best_batters = batters.groupby('batsmanName').agg({
+    'runs': 'sum',
+    'balls': 'sum',
+    'SR': 'mean'
+}).sort_values(by='runs', ascending=False).head(10)
+
+# Plot
+plt.figure(figsize=(10,6))
+sns.barplot(x=best_batters['runs'], y=best_batters.index, palette='Blues_d')
+plt.title("Top 10 Batters (Total Runs)")
+plt.xlabel("Runs")
+plt.ylabel("Player")
+plt.show()
+[17/05, 3:11 pm] Kiran Clg: # Filter bowlers who bowled at least 5 overs
+bowlers = df_bowling[df_bowling['overs'] >= 3]
+
+# Aggregate
+best_bowlers = bowlers.groupby('bowlerName').agg({
+    'wickets': 'sum',
+    'economy': 'mean',
+    'overs': 'sum'
+}).sort_values(by='wickets', ascending=False).head(10)
+
+# Plot
+plt.figure(figsize=(10,6))
+sns.barplot(x=best_bowlers['wickets'], y=best_bowlers.index, palette='Reds_d')
+plt.title("Top 10 Bowlers (Wickets)")
+plt.xlabel("Wickets")
+plt.ylabel("Bowler")
+plt.show()
+[17/05, 3:12 pm] Kiran Clg: # Total runs and wickets by player
+batting_agg = df_batting.groupby('batsmanName')['runs'].sum()
+bowling_agg = df_bowling.groupby('bowlerName')['wickets'].sum()
+
+# Join on player names
+all_rounders = pd.DataFrame({
+    'runs': batting_agg,
+    'wickets': bowling_agg
+}).dropna()
+
+# Compute a combined score (you can adjust weight)
+all_rounders['score'] = all_rounders['runs'] + (all_rounders['wickets'] * 20)
+
+# Top all-rounders
+top_all_rounders = all_rounders.sort_values(by='score', ascending=False).head(10)
+
+# Plot
+plt.figure(figsize=(10,6))
+sns.barplot(x=top_all_rounders['score'], y=top_all_rounders.index, palette='Greens_d')
+plt.title("Top 10 All-Rounders (Runs + Wickets)")
+plt.xlabel("Score (Runs + 20*Wickets)")
+plt.ylabel("Player")
+plt.show()
